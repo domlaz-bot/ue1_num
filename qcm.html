@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quiz : Numérique & Gestes Professionnels</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Typographie style Apple (San Francisco/Inter) */
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap');
+        
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: #F2F2F7; /* Gris clair typique iOS */
+        }
+
+        /* Effet de transparence "Glassmorphism" */
+        .glass-card {
+            background: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+        }
+
+        /* Animations fluides */
+        .fade-in {
+            animation: fadeIn 0.4s ease-out forwards;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .option-btn {
+            transition: all 0.2s ease;
+        }
+        .option-btn:active {
+            transform: scale(0.97);
+        }
+    </style>
+</head>
+<body class="min-h-screen flex items-center justify-center p-4">
+
+    <div class="glass-card max-w-lg w-full rounded-[2rem] shadow-xl p-8 relative overflow-hidden fade-in">
+        
+        <div class="text-center mb-8">
+            <h1 class="text-2xl font-semibold text-gray-900 tracking-tight">Bilan de formation</h1>
+            <p class="text-sm text-gray-500 mt-1 font-medium">Posture et gestes professionnels</p>
+            
+            <div class="w-full bg-gray-200 rounded-full h-1.5 mt-6">
+                <div id="progress-bar" class="bg-blue-500 h-1.5 rounded-full transition-all duration-500 ease-out" style="width: 0%"></div>
+            </div>
+            <p id="question-counter" class="text-xs text-gray-400 mt-2 text-right">1 / 5</p>
+        </div>
+
+        <div id="quiz-container">
+            <h2 id="question-text" class="text-xl font-medium text-gray-800 mb-6 text-center leading-snug">
+                </h2>
+
+            <div id="options-container" class="space-y-3">
+                </div>
+        </div>
+
+        <div id="feedback-container" class="hidden mt-6 p-5 rounded-2xl text-center fade-in">
+            <p id="feedback-icon" class="text-3xl mb-2"></p>
+            <p id="feedback-text" class="text-sm font-medium leading-relaxed"></p>
+            <button id="next-btn" class="mt-5 bg-blue-500 hover:bg-blue-600 text-white font-semibold py-3 px-8 rounded-full shadow-sm transition-colors option-btn w-full">
+                Continuer
+            </button>
+        </div>
+
+        <div id="result-container" class="hidden text-center fade-in">
+            <div class="text-6xl mb-4">🏆</div>
+            <h2 class="text-2xl font-semibold text-gray-900 mb-2">Formation terminée !</h2>
+            <p class="text-gray-600 mb-6">Votre score : <span id="score-text" class="font-bold text-blue-500 text-xl"></span></p>
+            <button onclick="location.reload()" class="bg-gray-900 hover:bg-black text-white font-semibold py-3 px-8 rounded-full shadow-md transition-colors option-btn w-full">
+                Recommencer le quiz
+            </button>
+        </div>
+
+    </div>
+
+    <script>
+        // --- DONNÉES DU QUIZ ---
+        const questions = [
+            {
+                question: "Les élèves maîtrisent naturellement le numérique pour apprendre car ils sont de la génération 'Digital Natives'.",
+                options: ["Vrai", "Faux"],
+                correct: 1, // L'index de la bonne réponse (0 = Vrai, 1 = Faux)
+                feedback: "Faux. Ils maîtrisent les usages sociaux (réseaux, vidéos), mais l'usage scolaire (rechercher, trier, concevoir) nécessite un apprentissage guidé par l'enseignant."
+            },
+            {
+                question: "Pour organiser les rencontres parents-professeurs dans le respect du RGPD, quel outil privilégier ?",
+                options: ["Un sondage Doodle", "Google Forms", "L'outil 'Rendez-vous' d'Apps.education"],
+                correct: 2,
+                feedback: "Exact ! L'outil institutionnel Apps.education garantit que les données personnelles des parents ne seront pas exploitées à des fins commerciales."
+            },
+            {
+                question: "Que signifie le logo 'BY' 👤 sur une licence Creative Commons ?",
+                options: ["Interdiction de modifier l'œuvre", "Obligation de citer l'auteur original", "Pas d'utilisation commerciale"],
+                correct: 1,
+                feedback: "Le 'BY' signifie 'Attribution'. C'est la règle d'or des communs numériques : on peut réutiliser, mais on doit toujours créditer le créateur."
+            },
+            {
+                question: "Où pouvez-vous trouver des outils et applications créés et mutualisés par d'autres enseignants ?",
+                options: ["La Forge Éducation 1er degré", "Les réseaux sociaux", "Le cloud de l'école"],
+                correct: 0,
+                feedback: "La Forge est l'espace institutionnel de création et de partage de communs numériques éducatifs. La Digitale est également une excellente source."
+            },
+            {
+                question: "Quel est l'avantage de générer une petite application (via IA) dans un seul fichier HTML ?",
+                options: ["Elle corrige les copies à votre place", "Elle est très légère et fonctionne hors-ligne", "Elle est validée par les inspecteurs"],
+                correct: 1,
+                feedback: "Parfait ! Le 'fichier unique' intègre tout (structure, design, interactivité). Il est facile à stocker sur votre Nuage et ne nécessite pas de serveurs complexes."
+            }
+        ];
+
+        // --- VARIABLES D'ÉTAT ---
+        let currentQuestionIndex = 0;
+        let score = 0;
+
+        // --- ÉLÉMENTS DU DOM ---
+        const questionText = document.getElementById("question-text");
+        const optionsContainer = document.getElementById("options-container");
+        const feedbackContainer = document.getElementById("feedback-container");
+        const feedbackIcon = document.getElementById("feedback-icon");
+        const feedbackText = document.getElementById("feedback-text");
+        const nextBtn = document.getElementById("next-btn");
+        const resultContainer = document.getElementById("result-container");
+        const quizContainer = document.getElementById("quiz-container");
+        const progressBar = document.getElementById("progress-bar");
+        const questionCounter = document.getElementById("question-counter");
+        const scoreText = document.getElementById("score-text");
+
+        // --- FONCTIONS ---
+        function loadQuestion() {
+            const currentQuestion = questions[currentQuestionIndex];
+            questionText.textContent = currentQuestion.question;
+            optionsContainer.innerHTML = "";
+            feedbackContainer.classList.add("hidden");
+            optionsContainer.classList.remove("hidden");
+
+            // Mise à jour de la barre de progression et du compteur
+            const progress = ((currentQuestionIndex) / questions.length) * 100;
+            progressBar.style.width = progress + "%";
+            questionCounter.textContent = `${currentQuestionIndex + 1} / ${questions.length}`;
+
+            // Création des boutons d'options
+            currentQuestion.options.forEach((option, index) => {
+                const button = document.createElement("button");
+                button.textContent = option;
+                // Style des boutons d'options (Style Apple)
+                button.className = "w-full bg-white border border-gray-200 text-gray-800 font-medium py-3.5 px-6 rounded-2xl shadow-sm hover:border-blue-500 hover:text-blue-500 transition-all option-btn text-left";
+                button.onclick = () => checkAnswer(index, button);
+                optionsContainer.appendChild(button);
+            });
+        }
+
+        function checkAnswer(selectedIndex, buttonClicked) {
+            const currentQuestion = questions[currentQuestionIndex];
+            const isCorrect = selectedIndex === currentQuestion.correct;
+
+            // Désactiver tous les boutons
+            const allButtons = optionsContainer.querySelectorAll("button");
+            allButtons.forEach(btn => {
+                btn.disabled = true;
+                btn.classList.add("opacity-50", "cursor-not-allowed");
+            });
+
+            // Mettre en évidence la réponse cliquée
+            buttonClicked.classList.remove("opacity-50");
+            
+            // Affichage du feedback
+            optionsContainer.classList.add("hidden");
+            feedbackContainer.classList.remove("hidden");
+
+            if (isCorrect) {
+                score++;
+                feedbackContainer.className = "mt-6 p-5 rounded-2xl text-center fade-in bg-green-50 text-green-800 border border-green-200";
+                feedbackIcon.textContent = "✅";
+            } else {
+                feedbackContainer.className = "mt-6 p-5 rounded-2xl text-center fade-in bg-red-50 text-red-800 border border-red-200";
+                feedbackIcon.textContent = "❌";
+            }
+
+            feedbackText.textContent = currentQuestion.feedback;
+        }
+
+        nextBtn.onclick = () => {
+            currentQuestionIndex++;
+            if (currentQuestionIndex < questions.length) {
+                loadQuestion();
+            } else {
+                showResults();
+            }
+        };
+
+        function showResults() {
+            quizContainer.classList.add("hidden");
+            feedbackContainer.classList.add("hidden");
+            document.querySelector(".text-center.mb-8").classList.add("hidden"); // Cacher l'en-tête
+            
+            resultContainer.classList.remove("hidden");
+            scoreText.textContent = `${score} / ${questions.length}`;
+        }
+
+        // --- INITIALISATION ---
+        loadQuestion();
+
+    </script>
+</body>
+</html>
